@@ -1,25 +1,99 @@
 <html>
 <body>
 
-<script src="../build/artoolkit.debug.js"></script>
+<script src="../build/artoolkit.min.js"></script>
 <script src="../js/artoolkit.api.js"></script>
 
-<video id="v" src="Data/output_4.ogg" width="320" height="240" loop="" controls="" autoplay></video>
+ 
+  <!-- 	<video id="v" src="Data/output_4.ogg" style="position: absolute; left: 5px; top: 5px; " width="320" height="240" loop="" controls="" autoplay></video>
+ -->
+  	<video id="v" src="Data/ssg.mp4"  width="640" height="480" loop="" controls="" autoplay></video>
+<p>Augmented video</p>
+  	<video id="vorig" src="Data/output_4.ogg"  width="320" height="240" loop="" controls="" autoplay></video>
+<p>Original video</p>
 
 <script>
 
-var arController = new ARController(320, 240, 'Data/camera_para.dat');
+
+var arController = new ARController(640, 480, 'Data/camera_para.dat');
 arController.onload = function() {
+//createCanvasOverlay("#FF3322");//,document.getElementById('v'));
 
-	var video = document.getElementById('v');
+var video = document.getElementById('v');
+video.style.zIndex=103;
 
-	arController.debugSetup();
+//canvas2.style.zIndex=50;
+	//arController.debugSetup();
+	//var overlayCanvas = document.body;
+canvasContainer = document.createElement('div');
+        document.body.appendChild(canvasContainer);
+        canvasContainer.style.position="absolute";
+        canvasContainer.style.left="8px";
+        canvasContainer.style.top="8px";
+        // canvasContainer.style.width="640px";
+        // canvasContainer.style.height="480px";
+        canvasContainer.style.zIndex="20";
+  //      superContainer=document.body;
+
+
+
+	myCanvas = document.createElement('canvas');
+	myCanvas.width="640";
+	myCanvas.height="480";
+
+    // myCanvas.style.width = "320px";//superContainer.scrollWidth+"px";
+    // myCanvas.style.height = "240px"; //superContainer.scrollHeight+"px";
+    // myCanvas.style.zIndex="20";
+
+ //	myCanvas.width=superContainer.scrollWidth;
+ //   myCanvas.height=superContainer.scrollHeight;
+    myCanvas.style.overflow = 'visible';
+    myCanvas.style.position = 'absolute';
+
+   	var ctx = myCanvas.getContext('2d');
+   //	var ctx2 = myCanvas.getContext('2d');
+
+	canvasContainer.appendChild(myCanvas);
+console.log(canvasContainer.style.width, canvasContainer.style.height);
+console.log(myCanvas.width, myCanvas.height);
 
 	var interval = setInterval(function() {
 		arController.process(video);
-	}, 13);
+		arController.addEventListener('getMarker', function(ev) {
+			//	console.log("Detected marker with ids:", ev.data.marker.id, ev.data.marker.idPatt, ev.data.marker.idMatrix);
+						//	console.log("Marker vertex", ev.data.marker.vertex[0][0], ev.data.marker.vertex[0][1]);		
+
+			//	console.log("Marker line0", ev.data.marker.line[0][0], ev.data.marker.line[0][1], ev.data.marker.line[0][2]);		
+			//	console.log("Marker line1", ev.data.marker.line[1][0], ev.data.marker.line[1][1], ev.data.marker.line[1][2]);
+ctx.clearRect(0, 0, myCanvas.width, myCanvas.height);
+ctx.strokeStyle = "rgb(0,200,200)";
+ctx.fillStyle="rgb(150,200,200)";
+ ctx.beginPath();
+ ctx.lineWidth=4;
+   ctx.moveTo(ev.data.marker.vertex[0][0], ev.data.marker.vertex[0][1]);
+   for (var i=0;i<4;i++) {
+   		ctx.lineTo(ev.data.marker.vertex[i][0], ev.data.marker.vertex[i][1]);
+   		ctx.fill();
+   }
+   
+   //  ctx.fillStyle = "rgb(0,200,0)";
+
+  // ctx.font = "24px serif";
+  // ctx.fillText("Buy Soap", ev.data.marker.pos[0], ev.data.marker.pos[1]);
+
+  // ctx.strokeStyle = "rgb(200,0,0)";
+  // ctx.beginPath();
+
+  // ctx.moveTo(ev.data.marker.vertex[3][0], ev.data.marker.vertex[3][1]);
+
+  //  ctx.lineTo(ev.data.marker.vertex[0][0], ev.data.marker.vertex[0][1]);
+  //  ctx.stroke();
+    
+			});
+	}, 10);
 
 };
+//draw(document.getElementById('c1'));
 
 </script>
 
