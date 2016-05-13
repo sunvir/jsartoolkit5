@@ -1,0 +1,233 @@
+<html>
+<body>
+
+
+
+<script src="../build/artoolkit.debug.js"></script>
+<script src="../js/artoolkit.api.js"></script>
+<script async src="js/third_party/three.js/three.min.js"></script>
+<script async src="../js/artoolkit.three.js"></script>
+
+	<video id="v" src="Data/output_4.ogg"  width="640" height="480" loop="" controls="" autoplay></video>
+
+
+<script>
+
+
+
+var arController = new ARController(640, 480, 'Data/camera_para.dat');
+arController.onload = function() {
+//createCanvasOverlay("#FF3322");//,document.getElementById('v'));
+
+var video = document.getElementById('v');
+video.style.zIndex=103;
+
+
+
+//canvas2.style.zIndex=50;
+	//arController.debugSetup();
+	//var overlayCanvas = document.body;
+	canvasContainer = document.createElement('div');
+    document.body.appendChild(canvasContainer);
+    canvasContainer.style.position="absolute";
+    canvasContainer.style.left="8px";
+    canvasContainer.style.top="8px";
+       
+
+    // create an overlay canvas for the regular graphics
+	myCanvas = document.createElement('canvas');
+	myCanvas.width="640";
+	myCanvas.height="480";
+
+    myCanvas.style.overflow = 'visible';
+    myCanvas.style.position = 'absolute';
+
+   	var ctx = myCanvas.getContext('2d');
+
+	canvasContainer.appendChild(myCanvas);
+
+	// Create renderer for threejs graphics with a size that matches the video.
+	//
+	var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+	renderer.setSize(video.videoWidth, video.videoHeight);
+	renderer.setSize(myCanvas.width, myCanvas.height);
+	renderer.setClearColor( 0xffffff, 0); // make it transparent
+
+	canvasContainer.appendChild(renderer.domElement);
+
+	var detectedBarcodeMarkers = {};
+
+	// Create a marker root object to keep track of the marker.
+	//
+	var markerRoot = new THREE.Object3D();
+
+	// Make the marker root matrix manually managed.
+	//
+	markerRoot.matrixAutoUpdate = false;
+
+//	var interval = setInterval(function() {
+		//arController.process(video);
+		arController.addEventListener('getMarker', function(ev) {
+
+			//console.log("Detected marker:", ev.data.marker);
+			
+			ctx.clearRect(0, 0, myCanvas.width, myCanvas.height);
+			ctx.strokeStyle = "rgb(0,200,200)";
+			ctx.fillStyle="rgb(150,200,200)";
+			ctx.beginPath();
+			ctx.lineWidth=4;
+			ctx.moveTo(ev.data.marker.vertex[0][0], ev.data.marker.vertex[0][1]);
+			for (var i=0;i<4;i++) {
+		   		ctx.lineTo(ev.data.marker.vertex[i][0], ev.data.marker.vertex[i][1]);
+		   		ctx.fill();
+		  	}
+
+		  var barcodeId = ev.data.marker.idMatrix;
+			if (barcodeId !== -1) {
+			//	console.log("saw a barcode marker with id", barcodeId);
+
+// The marker was found in this video frame, make it visible.
+		markerRoot.visible = true;
+
+		// Copy the marker transformation matrix to the markerRoot matrix.
+		markerRoot.matrix.elements.set(ev.data.matrix);
+
+
+				// Note that you need to copy the values of the transformation matrix,
+				// as the event transformation matrix is reused for each marker event
+				// sent by an ARController.
+				//
+				// var transform = ev.data.matrix;
+				// if (!detectedBarcodeMarkers[barcodeId]) {
+				// 	detectedBarcodeMarkers[barcodeId] = {
+				// 		visible: true,
+				// 		matrix: new Float32Array(16)
+				// 	}
+				// }
+				// detectedBarcodeMarkers[barcodeId].visible = true;
+				// detectedBarcodeMarkers[barcodeId].matrix.set(transform);
+
+			}
+
+
+		});
+
+// Add a cube to the marker root.
+//
+var sphere = new THREE.Mesh(
+			new THREE.SphereGeometry(0.5, 8, 8),
+			new THREE.MeshNormalMaterial()
+		);
+		sphere.material.shading = THREE.FlatShading;
+	//	sphere.position.z = -0.5;
+//markerRoot.add( new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.NormalGeometry()) );
+markerRoot.add(sphere);
+
+
+//renderer.setSize( window.innerWidth, window.innerHeight );
+
+//document.body.appendChild(renderer.domElement);
+
+var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+var cube = new THREE.Mesh( geometry, material );
+
+
+
+// Set up the scene and camera.
+//
+var scene = new THREE.Scene();
+//var camera = new THREE.Camera();
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
+
+//scene.add(camera);
+scene.add(markerRoot);
+scene.add( cube );
+//camera.position.z = 14;
+
+
+// Make the camera matrix manually managed.
+//
+// camera.matrixAutoUpdate = false;
+
+// Set the camera matrix to the AR camera matrix.
+//
+camera.matrix.elements.set(arController.getCameraMatrix());
+
+//	}, 3000);
+
+// On each frame, detect markers, update their positions and
+// render the frame on the renderer.
+//
+var tick = function() {
+	requestAnimationFrame(tick);
+
+	// Hide the marker, we don't know if it's visible in this frame.
+	markerRoot.visible = false;
+	// Process detects markers in the video frame and sends
+	// getMarker events to the event listeners.
+	arController.process(video);
+sphere.rotation.z += 0.1;
+
+	// Render the updated scene.
+	renderer.render(scene, camera);
+};
+tick();
+
+
+};
+
+// var arController = new ARController(640, 480, 'Data/camera_para.dat');
+
+// arController.onload = function() {
+// 	console.log('ARController ready for use', arController);
+// var video = document.getElementById('v');
+
+
+// // Set the ARController pattern detection mode to detect barcode markers.
+// // arController.setPatternDetectionMode( artoolkit.AR_MATRIX_CODE_DETECTION );
+
+// // Add an event listener to listen to getMarker events on the ARController.
+// // Whenever ARController#process detects a marker, it fires a getMarker event
+// // with the marker details.
+// //
+// var detectedBarcodeMarkers = {};
+
+// arController.process(video);
+// 	var interval = setInterval(function() {
+
+// 		arController.addEventListener('getMarker', function(ev) {
+// 			var barcodeId = ev.data.marker.idMatrix;
+// 			console.log("Detected marker:", ev.data.marker);
+// 			if (barcodeId !== -1) {
+// 				console.log("saw a barcode marker with id", barcodeId);
+
+// 				// Note that you need to copy the values of the transformation matrix,
+// 				// as the event transformation matrix is reused for each marker event
+// 				// sent by an ARController.
+// 				//
+// 				var transform = ev.data.matrix;
+// 				if (!detectedBarcodeMarkers[barcodeId]) {
+// 					detectedBarcodeMarkers[barcodeId] = {
+// 						visible: true,
+// 						matrix: new Float32Array(16)
+// 					}
+// 				}
+// 				detectedBarcodeMarkers[barcodeId].visible = true;
+// 				detectedBarcodeMarkers[barcodeId].matrix.set(transform);
+
+// 			}
+// 		});
+// 		},  100);
+
+
+
+// };
+
+
+
+
+</script>
+
+</body>
+</html>
