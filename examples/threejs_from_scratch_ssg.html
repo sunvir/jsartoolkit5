@@ -6,7 +6,7 @@
 <script src="../js/artoolkit.api.js"></script>
 
 <video id="v" src="Data/output_4.ogg" width="320" height="240" loop="infinite" controls="" autoplay webkit-playsinline></video>
-
+<video id="v2" src="Data/output_4.ogg" width="320" height="240" loop="infinite" controls="" autoplay webkit-playsinline></video>
 <script id="vert" type="glsl-vertex">
 precision highp float;
 precision lowp int;
@@ -94,7 +94,7 @@ camera.matrixAutoUpdate = false;
 // Add the marker models and suchlike into your marker root object.
 
 var cube = new THREE.Mesh(
-	new THREE.BoxGeometry(2,.2,.1),
+	new THREE.BoxGeometry(1,1,1),
 	USE_SHADER ?
 		shaderMaterial :
 		new THREE.MeshLambertMaterial({ color: 0xffffff, wireframe: false })
@@ -108,7 +108,7 @@ var sphere = new THREE.Mesh(
 		);
 //sphere.material.shading = USE_SHADER ? shaderMaterial : THREE.FlatShading;
 
-markerRoot.add(sphere);
+// markerRoot.add(sphere);
 markerRoot.add(cube);
 
 // Add the marker root to your scene.
