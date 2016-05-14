@@ -3,7 +3,7 @@
 (function() {
 	var integrate = function() {
 		/**
-			Helper for setting up a Three.js AR scene using the device camera as input.
+			Helpers for setting up a Three.js AR scene using the device camera (getUserMediaScene) or video (getVideoThreeScene) as input. 
 			Pass in the maximum dimensions of the video you want to process and onSuccess and onError callbacks.
 
 			On a successful initialization, the onSuccess callback is called with an ThreeARScene object.
@@ -50,6 +50,54 @@
 			var video = this.getUserMediaARController(obj);
 			return video;
 		};
+
+		ARController.getVideoThreeScene = function(configuration) {
+			var obj = {};
+			for (var i in configuration) {
+				obj[i] = configuration[i];
+			}
+			var onSuccess = configuration.onSuccess;
+			var video = configuration.video; 
+			var cameraParamURL = configuration.cameraParam;
+
+			// snippet from artoolkit.api.js ARController.getUserMediaARController
+				new ARCameraParam(cameraParamURL, function() {
+					console.log("running arCameraParam");
+					var arCameraParam = this;
+					var maxSize = configuration.maxARVideoSize || Math.max(video.videoWidth, video.videoHeight);
+					var f = maxSize / Math.max(video.videoWidth, video.videoHeight);
+					var w = f * video.videoWidth;
+					var h = f * video.videoHeight;
+					if (video.videoWidth < video.videoHeight) {
+						var tmp = w;
+						w = h;
+						h = tmp;
+					}
+					var arController = new ARController(w, h, arCameraParam);
+					arController.image = video;
+					if (video.videoWidth < video.videoHeight) {
+						arController.orientation = 'portrait';
+						arController.videoWidth = video.videoHeight;
+						arController.videoHeight = video.videoWidth;
+					} else {
+						arController.orientation = 'landscape';
+						arController.videoWidth = video.videoWidth;
+						arController.videoHeight = video.videoHeight;
+					}
+					console.log("xGot ARController", arController);
+					console.log("xGot ARCameraParam", arCameraParam);
+					console.log("xGot video", arController.image);
+					var scenes = arController.createThreeScene(video);
+					onSuccess(scenes, arController, arCameraParam);
+
+				}, function(err) {
+						console.error("ARController: Failed to load ARCameraParam", err);
+				});
+		// -- end of snippet
+
+			return video;
+		};
+
 
 		/**
 			Creates a Three.js scene for use with this ARController.
