@@ -92,6 +92,10 @@ window.ARThreeOnLoad = function() {
 			arScene.scene.add(markerRoot);
 		});
 
+		var markerRoot = arController.createThreeBarcodeMarker(2);
+			markerRoot.add(torus);
+			arScene.scene.add(markerRoot);
+
 		var tick = function() {
 			arScene.process();
 

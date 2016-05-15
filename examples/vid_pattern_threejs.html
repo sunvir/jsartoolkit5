@@ -10,18 +10,21 @@ html,body {
 	text-align: center;
 	overflow-x: hidden;
 }
+/*
+  No flip needed as we are using video, not camera
 .portrait canvas {
 	transform-origin: 0 0;
 	transform: rotate(-90deg) translateX(-100%);
 }
 .desktop canvas {
  	transform: scale(-1, 1);
-}
+}*/
 </style>
 </head>
 <body>
+<video id="v" src="Data/ssg3.mp4"  width="640" height="480" loop="" controls autoplay></video>
 
-<h1>Pattern marker example with Three.js</h1>
+<h1>Augments pattern markers with sphere or torus</h1>
 <p>On Chrome on Android, tap the screen to start playing video stream.</p>
 <p>Show  <a href="https://github.com/artoolkit/artoolkit5/blob/master/doc/patterns/Hiro%20pattern.pdf">Hiro pattern</a> and <a href="https://github.com/artoolkit/artoolkit5/blob/master/doc/patterns/Kanji%20pattern.pdf">Kanji pattern</a> to camera to display a colorful objects on top of them. Tap the screen to rotate the objects.
 
@@ -35,7 +38,8 @@ html,body {
 
 window.ARThreeOnLoad = function() {
 
-	ARController.getVideoThreeScene({maxARVideoSize: 320, cameraParam: 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', 
+	//ARController.getVideoThreeScene({maxARVideoSize: 320, cameraParam: 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', 
+	ARController.getVideoThreeScene({video: document.getElementById('v'),  cameraParam: 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', 
 	onSuccess: function(arScene, arController, arCamera) {
 
 		document.body.className = arController.orientation;
@@ -111,6 +115,14 @@ window.ARThreeOnLoad = function() {
 	delete window.ARThreeOnLoad;
 
 };
+
+var vstring = document.location.search.split('vid=')[1]
+console.log("vid", vstring);
+if (vstring) {
+	v.src = vstring;
+	v.width = 600;
+	v.height = 480;
+}
 
 if (window.ARController && ARController.getUserMediaThreeScene) {
 	ARThreeOnLoad();
