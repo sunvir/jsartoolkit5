@@ -1,0 +1,162 @@
+<html>
+
+<head>
+    <title>Barcode marker example with Three.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        text-align: center;
+        overflow-x: hidden;
+    }
+    /*
+      No flip needed as we are using video, not camera
+    .portrait canvas {
+        transform-origin: 0 0;
+        transform: rotate(-90deg) translateX(-100%);
+    }
+    .desktop canvas {
+        transform: scale(-1, 1);
+    }*/
+    </style>
+</head>
+
+<body>
+    <video id="v" src="/examples/Data/ssg3.mp4" width="640" height="480" loop="" controls autoplay></video>
+    <p>Original
+        <h1>Real-time augmentation of video</h1>
+        <p>The objects seen in the first 2 videos are being added to the original video locally on the browser.
+            <p>&larr; <a href="index.html">Back to examples</a></p>
+            <div id="torusdiv">Replace Hiro with Torus </div>
+            <div id="spherediv">Replace ThreeBarCode20 with Sphere</div>
+            <div id="augdiv">Augmented Video</div>
+            <script src="../build/artoolkit.debug.js"></script>
+            <script src="../js/artoolkit.api.js"></script>
+            <script async src="js/third_party/three.js/three.min.js"></script>
+            <script async src="../js/artoolkit.three.js"></script>
+            <script>
+            window.ARThreeOnLoad = function() {
+                console.log("in window.ARThreeOnLoad");
+
+
+
+                var myvid = document.getElementById('v');
+                var sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.7, 8, 8),
+                    new THREE.MeshNormalMaterial()
+                );
+                sphere.material.shading = THREE.FlatShading;
+                sphere.position.z = 0;
+
+                var torus = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.3, 0.2, 8, 8),
+                    new THREE.MeshNormalMaterial()
+                );
+
+                torus.material.shading = THREE.FlatShading;
+                torus.position.z = 0;
+                torus.rotation.x = Math.PI / 4;
+
+                var processWhenReady = function() {
+                    if (myvid.readyState == 4) {
+                        console.log(Date.now(), "###playing stuff!");
+                        v.hidden = false;
+                        if (option == 1) {
+                            // ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION,
+                            //  [{pattern: 20, replacement: sphere}]);
+                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION, [{
+                                pattern: 20,
+                                replacement: sphere
+                            }]);
+                        } else if (option == 2) {
+                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("torusdiv"), artoolkit.AR_TEMPLATE_MATCHING_COLOR, [{
+                                pattern: "Data/patt.hiro",
+                                replacement: torus
+                            }]);
+                            //   document.body.insertBefore(imgcanvas, document.getElementById("augdiv"));
+                        } else if (option == -99) {
+                            var loader = new THREE.TextureLoader();
+
+                            // load a resource
+                            loader.load(
+                                // resource URL
+                                'Data/intel-logo.png',
+                                // Function when resource is loaded
+                                function(texture) {
+                                    // do something with the texture
+                                    console.log("texture loaded", texture);
+
+                                    var material = new THREE.MeshBasicMaterial({
+                                        map: texture
+                                    });
+                                    var geometry = new THREE.PlaneBufferGeometry(1, 1);
+                                    var mesh = new THREE.Mesh(geometry, material);
+
+                                    // ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION,
+                                    //  [{pattern: 20, replacement: sphere}]);
+
+                                    ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_TEMPLATE_MATCHING_COLOR, [{
+                                        pattern: "Data/patt.hiro",
+                                        replacement: mesh, scale: new THREE.Vector3(1.2,1.2,1.2)
+                                    }, {
+                                        pattern: "Data/patt.kanji",
+                                        replacement: torus, scale: new THREE.Vector3(3,3,3)
+                                    }]);
+                                },
+                                // Function called when download progresses
+                                function(xhr) {
+                                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                                },
+                                // Function called when download errors
+                                function(xhr) {
+                                    console.log('An error happened');
+                                }
+                            );
+                        } else {
+                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("augdiv"), artoolkit.AR_TEMPLATE_MATCHING_COLOR, [{
+                                pattern: "Data/patt.kanji",
+                                replacement: sphere
+                            }, {
+                                pattern: "Data/patt.hiro",
+                                replacement: sphere
+                            }]);
+                        }
+                        delete window.ARThreeOnLoad;
+                    } else {
+                        console.log(Date.now(), ">>>not ready so resetting timeout");
+                        setTimeout(processWhenReady, 1000);
+                    }
+                };
+
+                processWhenReady();
+
+
+
+
+
+            };
+
+            // var vstring = document.location.search.split('vid=')[1];
+            // var option = document.location.search.split('option=')[2];
+
+            var vstring = getURLParameter('vid');
+            var option = getURLParameter('option');
+            console.log(Date.now(), "vid", vstring);
+            if (vstring) {
+                v.src = vstring;
+                v.width = 640;
+                v.height = 480;
+                v.load();
+            }
+
+
+            function getURLParameter(name) {
+                return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [, ""])[1].replace(/\+/g, '%20')) || null;
+            }
+            </script>
+</body>
+
+</html>

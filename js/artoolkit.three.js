@@ -1,7 +1,9 @@
 /* THREE.js ARToolKit integration */
 
 (function() {
+
 	var integrate = function() {
+		console.log("IN INTEGRATE");
 		/**
 			Helpers for setting up a Three.js AR scene using the device camera (getUserMediaScene) or video (getVideoThreeScene) as input. 
 			Pass in the maximum dimensions of the video you want to process and onSuccess and onError callbacks.
@@ -59,10 +61,14 @@
 			var onSuccess = configuration.onSuccess;
 			var video = configuration.video; 
 			var cameraParamURL = configuration.cameraParam;
+			console.log(Date.now(), "##### VIDEO", video.readyState);
+			if (video.readyState != 4) {
+				return 0;
+			}
 
-			// snippet from artoolkit.api.js ARController.getUserMediaARController
+				// snippet from artoolkit.api.js ARController.getUserMediaARController
 				new ARCameraParam(cameraParamURL, function() {
-					console.log("running arCameraParam");
+					console.log(Date.now(), "running arCameraParam for ", video.src);
 					var arCameraParam = this;
 					var maxSize = configuration.maxARVideoSize || Math.max(video.videoWidth, video.videoHeight);
 					var f = maxSize / Math.max(video.videoWidth, video.videoHeight);
@@ -97,6 +103,117 @@
 
 			return video;
 		};
+
+		/*
+		 detectAndAugment is a helper function that detects markers in a video, creates a new DOM element to 
+		 display that video and augments it with THREE objects as specified in the 'markers' object.
+		 Here's the structure of the markers object:
+		 {
+			pattern: pattern file or pattern number for barcode types
+			replacement: THREE object to augment it with
+		 }
+		@param {DOM Object} insertBefore - augmented video is placed before this object
+		@param {number} patternDetectionMode - one of artoolkit's pattern detection modes 
+			Options for this field are:
+				AR_TEMPLATE_MATCHING_COLOR
+				AR_TEMPLATE_MATCHING_MONO
+				AR_MATRIX_CODE_DETECTION
+				AR_TEMPLATE_MATCHING_COLOR_AND_MATRIX
+				AR_TEMPLATE_MATCHING_MONO_AND_MATRIX
+		@param {Array} markers - see above
+		*/
+  		ARController.detectAndAugment = function(myvid, mycameraParam, insertBefore, patternDetectionMode, markers) {
+           ARController.getVideoThreeScene({
+                video: myvid,
+                cameraParam: mycameraParam,
+                onSuccess: function(arScene, arController, arCamera) {
+                    console.log("ARController", arController);
+                    console.log("ARCameraParam", arCamera);
+                    console.log("arScene", arScene);
+
+                    console.log("video", arController.image);
+                    document.body.className = arController.orientation;
+
+                    if (patternDetectionMode) {
+                    	arController.setPatternDetectionMode(patternDetectionMode);
+					}
+                    var renderer = new THREE.WebGLRenderer({
+                        antialias: true
+                    });
+                    if (arController.orientation === 'portrait') {
+                        var w = (window.innerWidth / arController.videoHeight) * arController.videoWidth;
+                        var h = window.innerWidth;
+                        renderer.setSize(w, h);
+                        renderer.domElement.style.paddingBottom = (w - h) + 'px';
+                    } else {
+                        if (/Android|mobile|iPad|iPhone/i.test(navigator.userAgent)) {
+                            renderer.setSize(window.innerWidth, (window.innerWidth / arController.videoWidth) * arController.videoHeight);
+                        } else {
+                            renderer.setSize(arController.videoWidth, arController.videoHeight);
+                            document.body.className += ' desktop';
+                        }
+                    }
+
+                    document.body.insertBefore(renderer.domElement, insertBefore);
+
+                    // See /doc/patterns/Matrix code 3x3 (72dpi)/20.png
+                    var markerRoot;
+					console.log ("DETECT MODE: " , arController.getPatternDetectionMode());                    
+					console.log("markers", markers.length, markers);
+					for (var i = 0; i< markers.length; i++ ) {
+						if (patternDetectionMode == artoolkit.AR_TEMPLATE_MATCHING_COLOR) {
+						//	arController.setPatternDetectionMode(artoolkit.AR_TEMPLATE_MATCHING_COLOR);
+									console.log("template marker added for marker ", i , markers[i]);
+							arController.loadMarker(markers[i].pattern, function(markerId) {
+								markerRoot = arController.createThreeMarker(markerId);
+								if (markers[markerId].scale) {
+							     	markers[markerId].replacement.scale.copy(markers[markerId].scale);
+								}
+								markerRoot.add(markers[markerId].replacement);
+								arScene.scene.add(markerRoot);
+
+								console.log("template marker added for marker ", markerId , markers[markerId]);
+							});
+						}
+						if (patternDetectionMode == artoolkit.AR_MATRIX_CODE_DETECTION) {
+							//arController.setPatternDetectionMode(artoolkit.AR_MATRIX_CODE_DETECTION);
+							markerRoot = arController.createThreeBarcodeMarker(markers[i].pattern);
+							 markerRoot.add(markers[i].replacement);
+						     arScene.scene.add(markerRoot);
+							if (markers[i].scale) {
+						    	markers[i].replacement.scale.copy(markers[i].scale); // =  {x:1,y:1,z:1};
+						 	}
+						     console.log("threeBarcode marker added for ", i, markers[i], " at ", markerRoot);
+						}
+
+					}
+
+                    var rotationV = 0;
+                    var rotationTarget = 0;
+
+                    renderer.domElement.addEventListener('click', function(ev) {
+                        ev.preventDefault();
+                        rotationTarget += 1;
+                    }, false);
+
+                    var tick = function() {
+                        arScene.process();
+                        arScene.renderOn(renderer);
+                        rotationV += (rotationTarget - markers[0].replacement.rotation.z) * 0.05;
+                        markers[0].replacement.rotation.z += rotationV;
+                        rotationV *= 0.8;
+
+                        requestAnimationFrame(tick);
+                    };
+
+                    tick();
+
+                }
+            });
+        }
+
+
+
 
 
 		/**
@@ -356,6 +473,7 @@
 
 
 	var tick = function() {
+		console.log(Date.now(), "tick fucntion");
 		if (window.ARController && window.THREE) {
 			integrate();
 			if (window.ARThreeOnLoad) {
@@ -365,7 +483,7 @@
 			setTimeout(tick, 50);
 		}			
 	};
-
+console.log(Date.now(), "START INTEGRATE");
 	tick();
 
 })();
