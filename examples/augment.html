@@ -25,14 +25,15 @@
 </head>
 
 <body>
-    <video id="v" src="/examples/Data/ssg3.mp4" width="640" height="480" loop="" controls autoplay></video>
-    <p>Original
         <h1>Real-time augmentation of video</h1>
         <p>The objects seen in the first 2 videos are being added to the original video locally on the browser.
             <p>&larr; <a href="index.html">Back to examples</a></p>
             <div id="torusdiv">Replace Hiro with Torus </div>
             <div id="spherediv">Replace ThreeBarCode20 with Sphere</div>
             <div id="augdiv">Augmented Video</div>
+                <video id="v" src="/examples/Data/ssg3.mp4" width="640" height="480" loop="" controls autoplay></video>
+    <p>Original
+
             <script src="../build/artoolkit.debug.js"></script>
             <script src="../js/artoolkit.api.js"></script>
             <script async src="js/third_party/three.js/three.min.js"></script>
@@ -121,7 +122,7 @@
                                 replacement: sphere
                             }, {
                                 pattern: "Data/patt.hiro",
-                                replacement: sphere
+                                replacement: torus
                             }]);
                         }
                         delete window.ARThreeOnLoad;
