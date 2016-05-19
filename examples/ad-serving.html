@@ -1,0 +1,249 @@
+<html>
+
+<head>
+    <title>Barcode marker example with Three.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        text-align: center;
+        overflow-x: hidden;
+    }
+    /*
+      No flip needed as we are using video, not camera
+    .portrait canvas {
+        transform-origin: 0 0;
+        transform: rotate(-90deg) translateX(-100%);
+    }
+    .desktop canvas {
+        transform: scale(-1, 1);
+    }*/
+    </style>
+</head>
+
+<body>
+    <h1>Real-time augmentation of video</h1>
+    <h2>You should see 2 videos below, if you don't try reloading the page</h2>
+    <p>&larr; <a href="index.html">Back to examples</a></p>
+    <div id="torusdiv"></div>
+    <div id="spherediv"></div>
+    <div id="augdiv">Augmented Video</div>
+    <p id="stats">Interactive Info</p>
+    <video id="v" src="/examples/Data/demo.mp4" width="640" height="480" loop="" controls autoplay></video>
+    <p>Original
+        <script src="../build/artoolkit.debug.js"></script>
+        <script src="../js/artoolkit.api.js"></script>
+        <script async src="js/third_party/three.js/three.min.js"></script>
+        <script async src="../js/artoolkit.three.js"></script>
+        <script src="https://cdn.firebase.com/js/client/2.4.2/firebase.js"></script>
+        <script>
+
+        /* Callback function for when a marker object is clicked 
+            this is passed to ARController.detectAndAugment in the markers object
+        */
+        var append = function(txt) {
+            txt += " ";
+            document.getElementById("stats").innerHTML += txt;
+        }
+
+
+        new Firebase('https://boiling-heat-8108.firebaseio.com/');
+        var adref = new Firebase("https://boiling-heat-8108.firebaseio.com");
+        var adurl = "http://i.imgur.com/TQAOVkU.jpg";
+        var adKey;
+        adref.child('image_ads').once("value", function(data) {
+            var numAds = data.numChildren();
+            append("<br>" + numAds + "ads found. ");
+
+            var x = Math.floor((Math.random() * data.numChildren()));
+            adKey = Object.keys(data.val())[x];
+            append(adKey + " will be shown");
+        });
+
+        /*
+         Callback for when a marker is clicked
+         */
+        var adClickCB = function(params, data) {
+            append("<br>" + params[0] + " " + data);
+            var clickRef = adref.child("clicks/" + params[0]);
+            clickRef.push().set({
+                timestamp: Firebase.ServerValue.TIMESTAMP
+            })
+        }
+
+        /*
+        */
+        window.ARThreeOnLoad = function() {
+            console.log("in window.ARThreeOnLoad");
+
+
+            var myvid = document.getElementById('v');
+            var sphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.7, 8, 8),
+                new THREE.MeshNormalMaterial()
+            );
+            sphere.material.shading = THREE.FlatShading;
+            sphere.position.z = 0;
+
+            var torus = new THREE.Mesh(
+                new THREE.TorusGeometry(0.3, 0.2, 8, 8),
+                new THREE.MeshNormalMaterial()
+            );
+
+            torus.material.shading = THREE.FlatShading;
+            torus.position.z = 0;
+            torus.rotation.x = Math.PI / 4;
+
+            var pattern3x3 = {
+                detectionMode: artoolkit.AR_MATRIX_CODE_DETECTION,
+                matrixCodeType: artoolkit.AR_MATRIX_CODE_3x3
+            };
+            var pattern4x4 = {
+                detectionMode: artoolkit.AR_MATRIX_CODE_DETECTION,
+                matrixCodeType: artoolkit.AR_MATRIX_CODE_4x4
+            };
+            var template_mono = {
+                detectionMode: artoolkit.AR_TEMPLATE_MATCHING_MONO
+            };
+
+            var processWhenReady = function() {
+                if (myvid.readyState >= myvid.HAVE_ENOUGH_DATA) {
+                    console.log(Date.now(), "###playing stuff!");
+                    v.hidden = false;
+                    if (option == 1) {
+                        // ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION,
+                        //  [{pattern: 20, replacement: sphere}]);
+                        ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), pattern3x3, [{
+                            pattern: 20,
+                            replacement: sphere
+                        }]);
+                    } else if (option == 2) {
+                        ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("torusdiv"), template_mono, [{
+                            pattern: "Data/patt.hiro",
+                            scale: new THREE.Vector3(3, 3, 3),
+                            replacement: torus
+                        }]);
+                    } else if (option == 3) {
+                        ARController.detectAndAugment(myvid, 'Data/camera_para.dat', document.getElementById("torusdiv"), pattern3x3, [{
+                            pattern: 20,
+                            scale: new THREE.Vector3(3, 3, 3),
+                            replacement: torus
+
+                        }]);
+                    } else if (option == 4) {
+                         ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("augdiv"), template_mono, [{
+                            pattern: "Data/patt.kanji",
+                            replacement: sphere
+                        }, {
+                            pattern: "Data/patt.hiro",
+                            replacement: torus
+                        }]);
+                     } else {
+                        var loader = new THREE.TextureLoader();
+                        loader.crossOrigin = '';
+                        // load a resource
+                        //http://i.imgur.com/AclE0oI.jpg starbucks
+                        //http://i.imgur.com/TQAOVkU.jpg apple
+
+                        adref.child('adverts/' + adKey).once("value", function(data) {
+                            append("<br>" + adKey + " " + JSON.stringify(data.val()));
+                            console.log(data.val());
+                            var impressions = 0;
+                            if (!data.val()) {
+                                adurl = "Data/intel-logo.png";
+                            } else {
+                                adurl = data.val().url;
+                                impressions = data.val().impressions;
+                            }      
+                            console.log("impr:" + impressions);
+                            impressions = (impressions === undefined) ? 1 : impressions + 1;
+                            loader.load(
+                                // resource URL
+                                adurl,
+                                // Function when resource is loaded
+                                function(texture) {
+                                    // do something with the texture
+                                    console.log("texture loaded", texture);
+
+                                    var material = new THREE.MeshBasicMaterial({
+                                        map: texture
+                                    });
+                                    var geometry = new THREE.PlaneBufferGeometry(1, 1);
+                                    var mesh = new THREE.Mesh(geometry, material);
+
+                                    ARController.detectAndAugment(myvid, 'Data/camera_para.dat', document.getElementById("spherediv"), template_mono, [{
+                                        pattern: "Data/patt.hiro",
+                                        replacement: mesh,
+                                        scale: new THREE.Vector3(1.2, 1.2, 1.2),
+                                        onclick: adClickCB,
+                                        params: [adKey]
+                                    }, {
+                                        pattern: "Data/patt.kanji",
+                                        replacement: torus,
+                                        scale: new THREE.Vector3(3, 3, 3),
+                                        onclick: adClickCB,
+                                        params: [adKey]
+                                    }]);
+                                    var k = "adverts/" + adKey + "/impressions";
+                                    adref.child("adverts/" + adKey).update({
+                                        impressions: impressions
+                                    });
+                                    var imprRef = adref.child("impressions/" + adKey);
+                                    imprRef.push().set({
+                                        timestamp: Firebase.ServerValue.TIMESTAMP
+                                    })
+
+                                },
+                                // Function called when download progresses
+                                function(xhr) {
+                                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                                },
+                                // Function called when download errors
+                                function(xhr) {
+                                    console.log('An error happened', xhr);
+                                }
+                            );
+
+                        }, function(errorObject) {
+                            console.log("The read failed: " + errorObject.code);
+                        });
+                    }
+                    delete window.ARThreeOnLoad;
+                } else {
+                    console.log(Date.now(), ">>>not ready so resetting timeout", myvid);
+                    setTimeout(processWhenReady, 1000);
+                }
+            };
+
+            processWhenReady();
+
+
+
+
+
+        };
+
+        // var vstring = document.location.search.split('vid=')[1];
+        // var option = document.location.search.split('option=')[2];
+
+        var vstring = getURLParameter('vid');
+        var option = getURLParameter('option');
+        console.log(Date.now(), "vid", vstring);
+        if (vstring) {
+            v.src = vstring;
+            v.width = 640;
+            v.height = 480;
+            //   v.load();
+        }
+
+
+        function getURLParameter(name) {
+            return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [, ""])[1].replace(/\+/g, '%20')) || null;
+        }
+        </script>
+</body>
+
+</html>

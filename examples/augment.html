@@ -61,6 +61,9 @@
                 torus.position.z = 0;
                 torus.rotation.x = Math.PI / 4;
 
+                var pattern3x3 = { detectionMode: artoolkit.AR_MATRIX_CODE_DETECTION, matrixCodeType: artoolkit.AR_MATRIX_CODE_3x3 };
+                var template_mono = { detectionMode: artoolkit.AR_TEMPLATE_MATCHING_MONO };
+
                 var processWhenReady = function() {
                     if (myvid.readyState == 4) {
                         console.log(Date.now(), "###playing stuff!");
@@ -68,20 +71,22 @@
                         if (option == 1) {
                             // ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION,
                             //  [{pattern: 20, replacement: sphere}]);
-                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION, [{
+                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), pattern3x3, [{
                                 pattern: 20,
                                 replacement: sphere
                             }]);
                         } else if (option == 2) {
-                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("torusdiv"), artoolkit.AR_TEMPLATE_MATCHING_COLOR, [{
-                                pattern: "Data/patt.hiro",
+                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("torusdiv"), template_mono, [{
+                                pattern: "Data/patt.hiro", scale: new THREE.Vector3(3,3,3),
                                 replacement: torus
                             }]);
                             //   document.body.insertBefore(imgcanvas, document.getElementById("augdiv"));
                         } else if (option == -99) {
                             var loader = new THREE.TextureLoader();
-
+                            loader.crossOrigin = '';
                             // load a resource
+                            //http://i.imgur.com/AclE0oI.jpg starbucks
+                            //http://i.imgur.com/TQAOVkU.jpg apple
                             loader.load(
                                 // resource URL
                                 'Data/intel-logo.png',
@@ -96,16 +101,15 @@
                                     var geometry = new THREE.PlaneBufferGeometry(1, 1);
                                     var mesh = new THREE.Mesh(geometry, material);
 
-                                    // ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_MATRIX_CODE_DETECTION,
-                                    //  [{pattern: 20, replacement: sphere}]);
-
-                                    ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("spherediv"), artoolkit.AR_TEMPLATE_MATCHING_COLOR, [{
-                                        pattern: "Data/patt.hiro",
-                                        replacement: mesh, scale: new THREE.Vector3(1.2,1.2,1.2)
-                                    }, {
-                                        pattern: "Data/patt.kanji",
-                                        replacement: torus, scale: new THREE.Vector3(3,3,3)
-                                    }]);
+                                    ARController.detectAndAugment
+                                        (myvid, 'Data/camera_para.dat', document.getElementById("spherediv"), template_mono, 
+                                        [   {pattern: "Data/patt.hiro",
+                                            replacement: mesh, scale: new THREE.Vector3(1.2,1.2,1.2)
+                                            }, {
+                                            pattern: "Data/patt.kanji",
+                                            replacement: torus, scale: new THREE.Vector3(3,3,3)
+                                            }
+                                        ]);
                                 },
                                 // Function called when download progresses
                                 function(xhr) {
@@ -113,11 +117,11 @@
                                 },
                                 // Function called when download errors
                                 function(xhr) {
-                                    console.log('An error happened');
+                                    console.log('An error happened', xhr);
                                 }
                             );
                         } else {
-                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("augdiv"), artoolkit.AR_TEMPLATE_MATCHING_COLOR, [{
+                            ARController.detectAndAugment(myvid, 'Data/camera_para-iPhone 5 rear 640x480 1.0m.dat', document.getElementById("augdiv"), template_mono, [{
                                 pattern: "Data/patt.kanji",
                                 replacement: sphere
                             }, {
@@ -127,7 +131,7 @@
                         }
                         delete window.ARThreeOnLoad;
                     } else {
-                        console.log(Date.now(), ">>>not ready so resetting timeout");
+                        console.log(Date.now(), ">>>not ready so resetting timeout", myvid);
                         setTimeout(processWhenReady, 1000);
                     }
                 };
@@ -150,7 +154,7 @@
                 v.src = vstring;
                 v.width = 640;
                 v.height = 480;
-                v.load();
+             //   v.load();
             }
 
 

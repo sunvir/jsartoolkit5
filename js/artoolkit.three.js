@@ -62,9 +62,9 @@
 			var video = configuration.video; 
 			var cameraParamURL = configuration.cameraParam;
 			console.log(Date.now(), "##### VIDEO", video.readyState);
-			if (video.readyState != 4) {
-				return 0;
-			}
+			// if (video.readyState != 4) {
+			// 	return 0;
+			// }
 
 				// snippet from artoolkit.api.js ARController.getUserMediaARController
 				new ARCameraParam(cameraParamURL, function() {
@@ -111,18 +111,14 @@
 		 {
 			pattern: pattern file or pattern number for barcode types
 			replacement: THREE object to augment it with
+			scale: Vector3 specifying how much to scale the replacement before displaying it on the marker
+
 		 }
 		@param {DOM Object} insertBefore - augmented video is placed before this object
-		@param {number} patternDetectionMode - one of artoolkit's pattern detection modes 
-			Options for this field are:
-				AR_TEMPLATE_MATCHING_COLOR
-				AR_TEMPLATE_MATCHING_MONO
-				AR_MATRIX_CODE_DETECTION
-				AR_TEMPLATE_MATCHING_COLOR_AND_MATRIX
-				AR_TEMPLATE_MATCHING_MONO_AND_MATRIX
+		@param {Object} pattern - object defining marker detection modes, types, etc. 
 		@param {Array} markers - see above
 		*/
-  		ARController.detectAndAugment = function(myvid, mycameraParam, insertBefore, patternDetectionMode, markers) {
+  		ARController.detectAndAugment = function(myvid, mycameraParam, insertBefore, pattern, markers) {
            ARController.getVideoThreeScene({
                 video: myvid,
                 cameraParam: mycameraParam,
@@ -134,9 +130,30 @@
                     console.log("video", arController.image);
                     document.body.className = arController.orientation;
 
-                    if (patternDetectionMode) {
-                    	arController.setPatternDetectionMode(patternDetectionMode);
+                    if (pattern.detectionMode) {
+                    	/*
+						AR_TEMPLATE_MATCHING_COLOR
+						AR_TEMPLATE_MATCHING_MONO
+						AR_MATRIX_CODE_DETECTION
+						AR_TEMPLATE_MATCHING_COLOR_AND_MATRIX
+						AR_TEMPLATE_MATCHING_MONO_AND_MATRIX
+						The default mode is AR_TEMPLATE_MATCHING_COLOR.
+						*/
+                    	arController.setPatternDetectionMode(pattern.detectionMode);
 					}
+					if (pattern.matrixCodeType) {
+						/*
+	                	AR_MATRIX_CODE_3x3
+	       				AR_MATRIX_CODE_3x3_HAMMING63
+				        AR_MATRIX_CODE_3x3_PARITY65
+				        AR_MATRIX_CODE_4x4
+				        AR_MATRIX_CODE_4x4_BCH_13_9_3
+				        AR_MATRIX_CODE_4x4_BCH_13_5_5
+				        The default mode is AR_MATRIX_CODE_3x3.
+				        */
+						arController.setMatrixCodeType(pattern.matrixCodeType);
+					}
+
                     var renderer = new THREE.WebGLRenderer({
                         antialias: true
                     });
@@ -156,52 +173,128 @@
 
                     document.body.insertBefore(renderer.domElement, insertBefore);
 
-                    // See /doc/patterns/Matrix code 3x3 (72dpi)/20.png
+                    /* set up markers */
                     var markerRoot;
+                   	var rotationTarget = new Array(); 
+					var markerIndex = new Object();
 					console.log ("DETECT MODE: " , arController.getPatternDetectionMode());                    
 					console.log("markers", markers.length, markers);
 					for (var i = 0; i< markers.length; i++ ) {
-						if (patternDetectionMode == artoolkit.AR_TEMPLATE_MATCHING_COLOR) {
-						//	arController.setPatternDetectionMode(artoolkit.AR_TEMPLATE_MATCHING_COLOR);
-									console.log("template marker added for marker ", i , markers[i]);
+						rotationTarget[i] = 0;
+						if (pattern.detectionMode == artoolkit.AR_TEMPLATE_MATCHING_COLOR ||
+							pattern.detectionMode == artoolkit.AR_TEMPLATE_MATCHING_MONO) {
+							console.log(Date.now(), "template marker added for marker ", i , markers[i]);
 							arController.loadMarker(markers[i].pattern, function(markerId) {
 								markerRoot = arController.createThreeMarker(markerId);
 								if (markers[markerId].scale) {
 							     	markers[markerId].replacement.scale.copy(markers[markerId].scale);
 								}
 								markerRoot.add(markers[markerId].replacement);
+								markers[markerId].markerRoot = markerRoot;
+								/* template/pattern markers are assigned id's sequentially, so as long as
+								   we dont mix them with matrix markers, we should be ok.  
+								   NOTE: mmid will not always equal markerRoot (e.g. matrix numbers are used for mmid in matrix code detection)
+								*/
+								var mmid = String(markerId); 
+								markerIndex[mmid] = markerId;
 								arScene.scene.add(markerRoot);
-
-								console.log("template marker added for marker ", markerId , markers[markerId]);
+								console.log("marker added to scene ", markerId , markers[markerId], mmid);
 							});
 						}
-						if (patternDetectionMode == artoolkit.AR_MATRIX_CODE_DETECTION) {
-							//arController.setPatternDetectionMode(artoolkit.AR_MATRIX_CODE_DETECTION);
+						if (pattern.detectionMode == artoolkit.AR_MATRIX_CODE_DETECTION) {
 							markerRoot = arController.createThreeBarcodeMarker(markers[i].pattern);
 							 markerRoot.add(markers[i].replacement);
+							 markers[i].markerRoot = markerRoot;
+							 markers[i].marker = arController.getMarker(i);
+							/* template/pattern markers are assigned id's sequentially, so as long as
+							   we dont mix them with matrix markers, we should be ok.  
+							   NOTE: mmid will not always equal markerRoot (e.g. matrix numbers are used for mmid in matrix code detection)
+							*/
+							 var mmid = String(markers[i].pattern); 
+								markerIndex[mmid] = i;
 						     arScene.scene.add(markerRoot);
 							if (markers[i].scale) {
-						    	markers[i].replacement.scale.copy(markers[i].scale); // =  {x:1,y:1,z:1};
+						    	markers[i].replacement.scale.copy(markers[i].scale); 
 						 	}
 						     console.log("threeBarcode marker added for ", i, markers[i], " at ", markerRoot);
 						}
 
 					}
 
+
+					/* handle clicks */
                     var rotationV = 0;
-                    var rotationTarget = 0;
 
                     renderer.domElement.addEventListener('click', function(ev) {
-                        ev.preventDefault();
-                        rotationTarget += 1;
+	                    console.log ("Click: ", ev);
+	                    ev.preventDefault();
+
+						console.log("marker count", arController.getMarkerNum());
+						console.log("markerIndex", markerIndex);
+
+						/* loop through all currently detected markers */
+						for (var mm =0; mm< arController.getMarkerNum(); mm++) {
+							var currentMarker = arController.getMarker(mm);
+					        console.log("currentMarker", currentMarker.id, currentMarker.idPatt, currentMarker.idMatrix, markerIndex[String(currentMarker.id)]);
+							console.log("markerRoot", markers[markerIndex[String(currentMarker.id)]]);
+							/*  use this marker's unique pattern/id to find an index into the 'markers' array */
+							var i = markerIndex[String(currentMarker.id)];
+
+							/* if it exists and is visible, check if the click is on this marker  */
+                        	if (i >= 0 && markers[i].markerRoot.visible) {
+                        		console.log("uuid", markers[i].markerRoot.uuid);
+                        		var uuid = markers[i].markerRoot.uuid;
+
+	                        	var vector = new THREE.Vector3();
+
+	                        	markers[i].markerRoot.updateMatrixWorld();
+	                        	console.log("matrixworld updated:", markers[i].markerRoot, currentMarker);
+	                       	    vector.setFromMatrixPosition(markers[i].markerRoot.matrixWorld);
+
+	                       	    console.log("matrix pos " + i , vector);
+	                       		console.log("ReUpdVec " + i ,  "scale:"+ markers[i].scale.x, markers[i].scale.y, currentMarker, markers[i].markerRoot.visible);
+
+	                       		var p = new THREE.Vector2(ev.offsetX, ev.offsetY);
+	                       		var v = currentMarker.vertex;
+	                       		// do an axis-aligned, scaled bounding box compare 
+	                       		var minX = Math.min(v[0][0], v[1][0], v[2][0], v[3][0]);
+	       		                var minY = Math.min(v[0][1], v[1][1], v[2][1], v[3][1]);
+								var maxX = Math.max(v[0][0], v[1][0], v[2][0], v[3][0]);
+	       		                var maxY = Math.max(v[0][1], v[1][1], v[2][1], v[3][1]);
+	       		                var halfW = maxX-minX;
+								var halfH = maxY-minY;
+								var adjX = halfW * (1 - markers[i].scale.x);
+								var adjY = halfH * (1 - markers[i].scale.y);
+								minX += adjX; maxX -= adjX;
+								minY += adjY; maxY -= adjY;
+	                       		// var bbTL = new THREE.Vector2(currentMarker.vertex[2][0], currentMarker.vertex[2][1]);
+	                       		// var bbBR = new THREE.Vector2(currentMarker.vertex[0][0], currentMarker.vertex[0][1]);
+								console.log("COMPARE p", p, adjX, adjY);
+								if( minX <= p.x && p.x <= maxX && minY <= p.y && p.y <= maxY ) {
+									console.log(i,"COMPARE: HOORAY!", rotationTarget[i]);
+									rotationTarget[i] += 2* Math.PI;
+
+									/* call the onclick CB if it was defined */
+									if (markers[i].onclick) {
+										markers[i].onclick(markers[i].params, 
+	                        				 "<br>" + rotationTarget[i] + markers[i].pattern );
+									}
+								} else {
+									console.log(i,"COMPARE: far");
+								}
+
+                  			}
+                  		}
                     }, false);
 
                     var tick = function() {
                         arScene.process();
                         arScene.renderOn(renderer);
-                        rotationV += (rotationTarget - markers[0].replacement.rotation.z) * 0.05;
-                        markers[0].replacement.rotation.z += rotationV;
-                        rotationV *= 0.8;
+                        for (var i=0; i<markers.length; i++) {
+                        	rotationV += (rotationTarget[i] - markers[i].replacement.rotation.z) * 0.0872;
+                        	markers[i].replacement.rotation.z += rotationV;
+                        	rotationV = (rotationV < 0.1 ) ? 0 : rotationV * 0.5;
+                    	}
 
                         requestAnimationFrame(tick);
                     };
