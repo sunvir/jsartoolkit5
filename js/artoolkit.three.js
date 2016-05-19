@@ -252,23 +252,26 @@
 	                       	    vector.setFromMatrixPosition(markers[i].markerRoot.matrixWorld);
 
 	                       	    console.log("matrix pos " + i , vector);
-	                       		console.log("ReUpdVec " + i ,  "scale:"+ markers[i].scale.x, markers[i].scale.y, currentMarker, markers[i].markerRoot.visible);
 
 	                       		var p = new THREE.Vector2(ev.offsetX, ev.offsetY);
 	                       		var v = currentMarker.vertex;
-	                       		// do an axis-aligned, scaled bounding box compare 
+
+	                       		/* do an axis-aligned bounding box compare */
+	                       		console.log("ReUpdVec " + i , currentMarker, markers[i].markerRoot.visible);
 	                       		var minX = Math.min(v[0][0], v[1][0], v[2][0], v[3][0]);
 	       		                var minY = Math.min(v[0][1], v[1][1], v[2][1], v[3][1]);
 								var maxX = Math.max(v[0][0], v[1][0], v[2][0], v[3][0]);
 	       		                var maxY = Math.max(v[0][1], v[1][1], v[2][1], v[3][1]);
-	       		                var halfW = maxX-minX;
-								var halfH = maxY-minY;
-								var adjX = halfW * (1 - markers[i].scale.x);
-								var adjY = halfH * (1 - markers[i].scale.y);
-								minX += adjX; maxX -= adjX;
-								minY += adjY; maxY -= adjY;
-	                       		// var bbTL = new THREE.Vector2(currentMarker.vertex[2][0], currentMarker.vertex[2][1]);
-	                       		// var bbBR = new THREE.Vector2(currentMarker.vertex[0][0], currentMarker.vertex[0][1]);
+	       		                /* adjust for scale if needed */
+        	                    if (markers[i].scale) {
+		       		                var halfW = maxX-minX;
+									var halfH = maxY-minY;
+									var adjX = halfW * (1 - markers[i].scale.x);
+									var adjY = halfH * (1 - markers[i].scale.y);
+									minX += adjX; maxX -= adjX;
+									minY += adjY; maxY -= adjY;
+								} 
+
 								console.log("COMPARE p", p, adjX, adjY);
 								if( minX <= p.x && p.x <= maxX && minY <= p.y && p.y <= maxY ) {
 									console.log(i,"COMPARE: HOORAY!", rotationTarget[i]);
